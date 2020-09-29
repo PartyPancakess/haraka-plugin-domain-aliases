@@ -27,9 +27,13 @@ JSON file inside the config folder must be filled with pre-determined types of "
 `{ "test1" : { "action" : "drop" } }` 
 
 Aliases of 'user', '@host' and 'user@host' possible:
-`{ "demo" : { "action" : "drop" } }` 
-`{ "@example.com" : { "action": "alias", "to": ["test@domain.com"] } }` 
-`{ "demo@example.com" : { "alias", "to": ["haraka@example.com"] } }` 
+```
+{ "demo" : { "action" : "drop" } }
+
+{ "@example.com" : { "action": "alias", "to": ["test@domain.com"] } }
+
+{ "demo@example.com" : { "alias", "to": ["haraka@example.com"] } }
+```
 
 For more information, please check: https://github.com/haraka/haraka-plugin-aliases.
 
