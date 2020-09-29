@@ -1,5 +1,5 @@
 {
-  "name": "haraka-plugin-template",
+  "name": "haraka-plugin-domain-aliases",
   "version": "1.0.0",
   "description": "Haraka plugin that frobnicates email connections",
   "main": "index.js",
@@ -12,19 +12,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/haraka/haraka-plugin-template.git"
+    "url": "git+https://github.com/haraka/haraka-plugin-domain-aliases.git"
   },
   "keywords": [
     "haraka",
     "plugin",
-    "template"
+    "domain-aliases"
   ],
   "author": "Welcome Member <happy-haraka-hacker@example.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/haraka/haraka-plugin-template/issues"
+    "url": "https://github.com/haraka/haraka-plugin-domain-aliases/issues"
   },
-  "homepage": "https://github.com/haraka/haraka-plugin-template#readme",
+  "homepage": "https://github.com/haraka/haraka-plugin-domain-aliases#readme",
   "devDependencies": {
     "eslint": "*",
     "eslint-plugin-haraka": "*",
