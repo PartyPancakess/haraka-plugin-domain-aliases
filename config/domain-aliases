@@ -1,3 +1,9 @@
 {
- "@haraka.test" : { "action" : "domain-alias", "to" : "@haraka.test2" }
+ "test1" : { "action" : "drop" },
+ "test2" : { "action" : "alias", "to" : "non-test2" },
+ "test3" : { "action" : "alias", "to" : "test3" },
+ "test4" : { "action" : "alias", "to" : "non-test4@domain.com" },
+ "test5@domain.com" : { "action" : "alias", "to" : "non-test5@success.com" },
+ "test6@domain.com" : { "action" : "alias", "to" : "test6@success.com" },
+ "@domain.com" : { "action" : "domain-alias", "to" : "@example.com" }
 }

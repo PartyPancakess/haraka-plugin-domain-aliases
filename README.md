@@ -1,3 +1,4 @@
+
 [![Unix Build Status][ci-img]][ci-url]
 [![Windows Build Status][ci-win-img]][ci-win-url]
 [![Code Climate][clim-img]][clim-url]
@@ -5,68 +6,68 @@
 
 # haraka-plugin-domain-aliases
 
-Clone me, to create a new Haraka plugin!
+This plugin is derived from "aliases" plugin: https://github.com/haraka/haraka-plugin-aliases
 
-# Template Instructions
+Every functionality of haraka-plugin-aliases is available in haraka-plugin-domain-aliases. Additionally, with this plugin, it is possible to convey all the incoming e-mails for a domain to another domain.
 
-These instructions will not self-destruct after use. Use and destroy.
+& IMPORTANT: this plugin must appear in  `config/plugins`  before other plugins that run on hook_rcpt
 
-See also, [How to Write a Plugin](https://github.com/haraka/Haraka/wiki/Write-a-Plugin) and [Plugins.md](https://github.com/haraka/Haraka/blob/master/docs/Plugins.md) for additional plugin writing information.
+& WARNING: DO NOT USE THIS PLUGIN WITH queue/smtp_proxy.
 
-## Create a new repo for your plugin
+## Configuration
+#### Available actions:
+- drop
+- alias
+	- to (required)
+- domain-alias
+	- to (required)
 
-Haraka plugins are named like `haraka-plugin-something`. All the namespace after `haraka-plugin-` is yours for the taking. Please check the [Plugins](https://github.com/haraka/Haraka/blob/master/Plugins.md) page and a Google search to see what plugins already exist.
+### Aliases
+JSON file inside the config folder must be filled with pre-determined types of "actions". Example:
+`{ "test1" : { "action" : "drop" } }` 
 
-Once you've settled on a name, create the GitHub repo. On the repo's main page, click the _Clone or download_ button and copy the URL. Then paste that URL into a local ENV variable with a command like this:
+Aliases of 'user', '@host' and 'user@host' possible:
+`{ "demo" : { "action" : "drop" } }` 
+`{ "@example.com" : { "action": "alias", "to": ["test@domain.com"] } }` 
+`{ "demo@example.com" : { "alias", "to": ["haraka@example.com"] } }` 
 
-```sh
-export MY_GITHUB_ORG=haraka
-export MY_PLUGIN_NAME=haraka-plugin-SOMETHING
+For more information, please check: https://github.com/haraka/haraka-plugin-aliases.
+
+### Domain Aliases
+Maps the alias domain to the domain specified in the "to" option.
+Both the original alias and the recipient (target) alias should only consist of host, in the form of @host. Example:
+`{ "@haraka.test" : { "action" : "domain-alias", "to" : "@domain.com" } }` 
+This configuration will forward any e-mail sent to user@haraka.test to user@domain.com.
+
+#### Alias matching order
+Larger and more specific aliases match first and "alias" action has precedence over "domain-alias".
 ```
-
-Clone and rename the domain-aliases repo:
-
-```sh
-git clone git@github.com:haraka/haraka-plugin-domain-aliases.git
-mv haraka-plugin-domain-aliases $MY_PLUGIN_NAME
-cd $MY_PLUGIN_NAME
-git remote rm origin
-git remote add origin "git@github.com:$MY_GITHUB_ORG/$MY_PLUGIN_NAME.git"
+{
+ "user@haraka.test" : { "action" : "alias", "to" : "user2@domain.com" },
+ "@haraka.test" : { "action" : "domain-alias", "to" : "@example.com" }
+}
+or
+{
+ "@haraka.test" : { "action" : "domain-alias", "to" : "@example.com" },
+ "user@haraka.test" : { "action" : "alias", "to" : "user2@domain.com" }
+}
 ```
-
-Now you'll have a local git repo to begin authoring your plugin
-
-## rename boilerplate
-
-Replaces all uses of the word `domain-aliases` with your plugin's name.
-
-./redress.sh [something]
-
-You'll then be prompted to update package.json and then force push this repo onto the GitHub repo you've created earlier.
+Both configurations above will work the same. If the recipient's e-mail address  of the sent mail is user@haraka.test, the mail will be forwarded to user2@domain.com. However, if the address is non.user@haraka.test, it will be forwarded to non.user@example.com.
 
 
-# Add your content here
 
-## INSTALL
-
-```sh
-cd /path/to/local/haraka
-npm install haraka-plugin-domain-aliases
-echo "domain-aliases" >> config/plugins
-service haraka restart
+### Example Configuration
 ```
-
-### Configuration
-
-If the default configuration is not sufficient, copy the config file from the distribution into your haraka config dir and then modify it:
-
-```sh
-cp node_modules/haraka-plugin-domain-aliases/config/domain-aliases.ini config/domain-aliases.ini
-$EDITOR config/domain-aliases.ini
+{
+    "test1" : { "action" : "drop" },
+    "test2" : { "action" : "alias", "to" : "non-test2" },
+    "test3" : { "action" : "alias", "to" : "test3" },
+    "test4" : { "action" : "alias", "to" : "non-test4@domain.com" },
+    "test5@domain.com" : { "action" : "alias", "to" : "non-test5@success.com" }
+    "test6@domain.com" : { "action" : "alias", "to" : "test6@success.com" },
+    "@domain.com" : { "action" : "domain-alias", "to" : "@example.com" }
+}
 ```
-
-## USAGE
-
 
 <!-- leave these buried at the bottom of the document -->
 [ci-img]: https://github.com/haraka/haraka-plugin-domain-aliases/workflows/Plugin%20Tests/badge.svg
