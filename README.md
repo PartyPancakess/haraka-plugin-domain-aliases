@@ -24,7 +24,9 @@ Every functionality of haraka-plugin-aliases is available in haraka-plugin-domai
 
 ### Aliases
 JSON file inside the config folder must be filled with pre-determined types of "actions". Example:
-`{ "test1" : { "action" : "drop" } }` 
+```
+{ "test1" : { "action" : "drop" } }
+```
 
 Aliases of 'user', '@host' and 'user@host' possible:
 ```

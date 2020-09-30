@@ -34,5 +34,8 @@
     "haraka-test-fixtures": "*",
     "nodeunit": "*",
     "mocha": "*"
+  },
+  "directories": {
+    "test": "test"
   }
 }
