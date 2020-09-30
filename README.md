@@ -40,7 +40,9 @@ For more information, please check: https://github.com/haraka/haraka-plugin-alia
 ### Domain Aliases
 Maps the alias domain to the domain specified in the "to" option.
 Both the original alias and the recipient (target) alias should only consist of host, in the form of @host. Example:
-`{ "@haraka.test" : { "action" : "domain-alias", "to" : "@domain.com" } }` 
+```
+{ "@haraka.test" : { "action" : "domain-alias", "to" : "@domain.com" } }
+```
 This configuration will forward any e-mail sent to user@haraka.test to user@domain.com.
 
 #### Alias matching order

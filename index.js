@@ -50,14 +50,6 @@ exports.aliases = function (next, connection, params) {
     return onMatch(rcpt, action);
   }
 
-  // @domain match
-  const dom_match = `@${host}`;
-  if (cfg[`@${host}`]) {
-    if (cfg[dom_match].action) action = cfg[dom_match].action;
-    match = dom_match;
-    return onMatch(dom_match, action);
-  }
-
   // user only match
   if (cfg[user]) {
     if (cfg[user].action) action = cfg[user].action;
@@ -75,6 +67,14 @@ exports.aliases = function (next, connection, params) {
   if (cfg[prefix_dom]) {
     if (cfg[prefix_dom].action) action = cfg[prefix_dom].action;
     return onMatch(prefix_dom, action);
+  }
+
+  // @domain match
+  const dom_match = `@${host}`;
+  if (cfg[`@${host}`]) {
+    if (cfg[dom_match].action) action = cfg[dom_match].action;
+    match = dom_match;
+    return onMatch(dom_match, action);
   }
 
   next();
@@ -131,8 +131,11 @@ function _domain_alias(plugin, connection, key, config, host) {
     return;
   }
 
+  
   connection.logdebug(plugin, "domain-aliasing " + txn.rcpt_to + " to " + to);
-  let original_rcpt = txn.rcpt_to.pop();
+  const original_rcpt = txn.rcpt_to.pop();
   to = original_rcpt.user + to;
+  
+  txn.rcpt_to.pop();
   txn.rcpt_to.push(new Address(`<${to}>`));
 }

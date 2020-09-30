@@ -1,52 +1,389 @@
+'use strict';
 
-// node.js built-in modules
-const assert   = require('assert')
+const path = require('path');
 
-// npm modules
-const fixtures = require('haraka-test-fixtures')
+const Address = require('address-rfc2821').Address;
+const fixtures = require('haraka-test-fixtures');
 
-// start of tests
-//    assert: https://nodejs.org/api/assert.html
-//    mocha: http://mochajs.org
+const stub = fixtures.stub.stub;
 
-beforeEach(function (done) {
-  this.plugin = new fixtures.plugin('domain-aliases')
-  done()  // if a test hangs, assure you called done()
-})
+const _set_up = function (done) {
 
-describe('domain-aliases', function () {
-  it('loads', function (done) {
-    assert.ok(this.plugin)
-    done()
-  })
-})
+  // needed for tests
+  this.plugin = new fixtures.plugin('domain_aliases');
+  this.recip = new Address('<test1@example.com>');
+  this.params = [this.recip];
 
-describe('load_domain-aliases_ini', function () {
-  it('loads domain-aliases.ini from config/domain-aliases.ini', function (done) {
-    this.plugin.load_domain-aliases_ini()
-    assert.ok(this.plugin.cfg)
-    done()
-  })
+  this.connection = new fixtures.connection.createConnection();
+  this.connection.transaction = new fixtures.transaction.createTransaction();
+  this.connection.transaction.rcpt_to = [this.params];
+  this.connection.loginfo = stub();
 
-  it('initializes enabled boolean', function (done) {
-    this.plugin.load_domain-aliases_ini()
-    assert.equal(this.plugin.cfg.main.enabled, true, this.plugin.cfg)
-    done()
-  })
-})
+  // some test data
+  this.plugin.config = this.plugin.config.module_config(path.resolve('test'));
+  this.plugin.inherits = stub();
 
-describe('uses text fixtures', function () {
-  it('sets up a connection', function (done) {
-    this.connection = fixtures.connection.createConnection({})
-    assert.ok(this.connection.server)
-    done()
-  })
+  // going to need these in multiple tests
+  this.plugin.register();
 
-  it('sets up a transaction', function (done) {
-    this.connection = fixtures.connection.createConnection({})
-    this.connection.transaction = fixtures.transaction.createTransaction({})
-    // console.log(this.connection.transaction)
-    assert.ok(this.connection.transaction.header)
-    done()
-  })
-})
+  done();
+};
+
+exports.domain_aliases = {
+  setUp: _set_up,
+  'should have register function': function (test) {
+    test.expect(2);
+    test.ok(this.plugin);
+    test.equal('function', typeof this.plugin.register);
+    test.done();
+  },
+  'register function should inherit from queue/discard': function (test) {
+    test.expect(2);
+    test.ok(this.plugin.inherits.called);
+    test.equals(this.plugin.inherits.args[0], 'queue/discard');
+    test.done();
+  },
+  'register function should call register_hook()': function (test) {
+    test.expect(1);
+    test.ok(this.plugin.register_hook.called);
+    test.done();
+  },
+  'register_hook() should register for propper hook': function (test) {
+    test.expect(1);
+    test.equals(this.plugin.register_hook.args[0], 'rcpt');
+    test.done();
+  },
+  'register_hook() should register available function': function (test) {
+    test.expect(3);
+    test.equals(this.plugin.register_hook.args[1], 'aliases');
+    test.ok(this.plugin.aliases);
+    test.equal('function', typeof this.plugin.aliases);
+    test.done();
+  },
+  'aliases hook always returns next()': function (test) {
+    const next = function (action) {
+      test.expect(1);
+      test.equals(undefined, action);
+      test.done();
+    };
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  
+  'should drop test1@example.com': function (test) {
+    const next = function (action) {
+      test.expect(1);
+      test.ok(this.connection.transaction.notes.discard);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should drop test2-testing@example.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test2-testing@example.com>');
+    this.params = [this.recip];
+
+    const next = function (action) {
+      test.expect(1);
+      test.ok(this.connection.transaction.notes.discard);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should drop test2-specific@example.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test2-specific@example.com>');
+    this.params = [this.recip];
+    const result = new Address('<test2@example.com>');
+
+    const next = function (action) {
+      test.expect(4);
+      test.equals(undefined, this.connection.transaction.notes.discard);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test3@example.com to test3-works@example.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test3@example.com>');
+    this.params = [this.recip];
+    const result = new Address('<test3-works@example.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test4-testing@example.com to test4@example.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test4-testing@example.com>');
+    this.params = [this.recip];
+    const result = new Address('<test4@example.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test4+testing@example.com to test4@example.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test4+testing@example.com>');
+    this.params = [this.recip];
+    const result = new Address('<test4@example.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test5@example.com to test5-works@success.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test5@example.com>');
+    this.params = [this.recip];
+    const result = new Address('<test5-works@success.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test6-testing@example.com to test6-works@success.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test6-testing@example.com>');
+    this.params = [this.recip];
+    const result = new Address('<test6-works@success.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should drop @example.co': function (test) {
+    this.recip = new Address('<oc.elpmaxe@example.co>');
+    this.params = [this.recip];
+
+    const next = function (action) {
+      test.expect(1);
+      test.ok(this.connection.transaction.notes.discard);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should drop test11@example.org': function (test) {
+    this.recip = new Address('<test11@example.org>');
+    this.params = [this.recip];
+
+    const next = function (action) {
+      test.expect(1);
+      test.ok(this.connection.transaction.notes.discard);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map @demo.com to test12-works@success.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<demo2014@demo.com>');
+    this.params = [this.recip];
+    const result = new Address('<test12-works@success.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test13@example.net to test13-works@success.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test13@example.net>');
+    this.params = [this.recip];
+    const result = new Address('<test13-works@success.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test13+subaddress@example.net to test13-works@success.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test13+subaddress@example.net>');
+    this.params = [this.recip];
+    const result = new Address('<test13-works@success.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should explode test14@example.net to alice@success.com and bob@success.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test14@example.net>');
+    this.params = [this.recip];
+    const result = [new Address('<alice@success.com>'), new Address('<bob@success.com>')];
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to, result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should not drop test1@example.com, no config': function (test) {
+    // empty config data
+    this.plugin.cfg = {};
+
+    const next = function (action) {
+      test.expect(1);
+      test.equals(undefined, this.connection.transaction.notes.discard);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should fail with loginfo on unknown action': function (test) {
+    this.recip = new Address('<test7@example.com>');
+    this.params = [this.recip];
+
+    const next = function (action) {
+      test.expect(2);
+      test.ok(this.connection.loginfo.called);
+      test.equals(this.connection.loginfo.args[1],
+        "unknown action: " + this.plugin.cfg.test7.action);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should fail with loginfo on missing action': function (test) {
+    this.recip = new Address('<test8@example.com>');
+    this.params = [this.recip];
+
+    const next = function (action) {
+      test.expect(2);
+      test.ok(this.connection.loginfo.called);
+      test.equals(this.connection.loginfo.args[1],
+        "unknown action: <missing>");
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'action alias should fail with loginfo on missing to': function (test) {
+    this.recip = new Address('<test9@example.com>');
+    this.params = [this.recip];
+
+    const next = function (action) {
+      test.expect(2);
+      test.ok(this.connection.loginfo.called);
+      test.equals(this.connection.loginfo.args[1],
+        'alias failed for test9, no "to" field in alias config');
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+
+  'should map test15@haraka.test to test15@domain.com': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test15@haraka.test>');
+    this.params = [this.recip];
+    const result = new Address('<test15@domain.com>');
+
+    //had to add these manually
+    this.connection = new fixtures.connection.createConnection();
+    this.connection.transaction = new fixtures.transaction.createTransaction();
+    this.connection.transaction.rcpt_to = this.params;
+    this.connection.loginfo = stub();
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test16@domain.org to test16-works@success.com (and not to test16@example.com)': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test16@domain.org>');
+    this.params = [this.recip];
+    const result = new Address('<test16-works@success.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  },
+  'should map test17@domain.org to test17-works@success.com (and not to test17@example.com)': function (test) {
+    // these will get reset in _set_up everytime
+    this.recip = new Address('<test17@domain.org>');
+    this.params = [this.recip];
+    const result = new Address('<test17-works@success.com>');
+
+    const next = function (action) {
+      test.expect(3);
+      test.ok(this.connection.transaction.rcpt_to);
+      test.ok(Array.isArray(this.connection.transaction.rcpt_to));
+      test.deepEqual(this.connection.transaction.rcpt_to.pop(), result);
+      test.done();
+    }.bind(this);
+
+    this.plugin.aliases(next, this.connection, this.params);
+  }
+};
