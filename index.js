@@ -127,7 +127,6 @@ function _domain_alias(plugin, connection, key, config, host) {
     connection.loginfo(plugin, `domain-alias failed for ${key}, domain field is not accepted! Please fix the config file of the plugin.
     Correct form: "@example.com" : { "action" : "domain-alias", "to" : "@domain.test" }
     Continuing  without changing domain.`);
-    // throw new Error('');
     return;
   }
 
@@ -136,6 +135,5 @@ function _domain_alias(plugin, connection, key, config, host) {
   const original_rcpt = txn.rcpt_to.pop();
   to = original_rcpt.user + to;
   
-  txn.rcpt_to.pop();
   txn.rcpt_to.push(new Address(`<${to}>`));
 }
