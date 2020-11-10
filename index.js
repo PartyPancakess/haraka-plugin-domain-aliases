@@ -36,8 +36,8 @@ exports.aliases = function (next, connection, params) {
         _alias(plugin, connection, match1, cfg[match1], host);
         break;
       case 'domain-alias':
-        _domain_alias(plugin, connection, match1, cfg[match1], host);
-        break;
+        _domain_alias(plugin, connection, match1, cfg[match1], host, next);
+        return;
       default:
         connection.loginfo(plugin, "unknown action: " + action1);
     }
@@ -113,12 +113,12 @@ function _alias(plugin, connection, key, config, host) {
 }
 
 
-function _domain_alias(plugin, connection, key, config, host) {
+function _domain_alias(plugin, connection, key, config, host, next) {
   const txn = connection.transaction;
 
   if (!config.to) {
     connection.loginfo(plugin, `domain alias failed for ${key}, no "to" field in config`);
-    return;
+    return next();
   }
   
 
@@ -127,7 +127,8 @@ function _domain_alias(plugin, connection, key, config, host) {
     connection.loginfo(plugin, `domain-alias failed for ${key}, domain field is not accepted! Please fix the config file of the plugin.
     Correct form: "@example.com" : { "action" : "domain-alias", "to" : "@domain.test" }
     Continuing  without changing domain.`);
-    return;
+    // throw new Error('');
+    return next();
   }
 
   
@@ -135,5 +136,8 @@ function _domain_alias(plugin, connection, key, config, host) {
   const original_rcpt = txn.rcpt_to.pop();
   to = original_rcpt.user + to;
   
+  txn.rcpt_to.pop();
   txn.rcpt_to.push(new Address(`<${to}>`));
+
+  return next(OK);
 }
