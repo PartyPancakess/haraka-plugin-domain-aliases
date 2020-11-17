@@ -1,6 +1,6 @@
 {
   "name": "haraka-plugin-domain-aliases",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "Haraka plugin that add aliases. It is a slightly modified version of haraka-plugin-aliases.",
   "main": "index.js",
   "scripts": {

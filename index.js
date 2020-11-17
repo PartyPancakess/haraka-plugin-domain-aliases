@@ -1,5 +1,7 @@
 // domain_aliases
 // Do not run this plugin with the queue/smtp_proxy plugin.
+// Place this plugin before rcpt_to.in_host_list in config/plugins file.
+// This plugin must be the last rcpt_to plugin in the config/plugins list (except for rcpt_to.in_host_list and haraka-plugin-domain-limit).
 const Address = require('address-rfc2821').Address;
 
 exports.register = function () {
@@ -33,8 +35,8 @@ exports.aliases = function (next, connection, params) {
         _drop(plugin, connection, match1);
         break;
       case 'alias':
-        _alias(plugin, connection, match1, cfg[match1], host);
-        break;
+        _alias(plugin, connection, match1, cfg[match1], host, next);
+        return;
       case 'domain-alias':
         _domain_alias(plugin, connection, match1, cfg[match1], host, next);
         return;
@@ -85,12 +87,12 @@ function _drop(plugin, connection, rcpt) {
   connection.transaction.notes.discard = true;
 }
 
-function _alias(plugin, connection, key, config, host) {
+function _alias(plugin, connection, key, config, host, next) {
   const txn = connection.transaction;
 
   if (!config.to) {
     connection.loginfo(plugin, `alias failed for ${key}, no "to" field in alias config`);
-    return;
+    return next();
   }
 
   if (Array.isArray(config.to)) {
@@ -99,7 +101,7 @@ function _alias(plugin, connection, key, config, host) {
     config.to.forEach((addr) => {
       txn.rcpt_to.push(new Address(`<${addr}>`));
     })
-    return;
+    return next();
   }
 
   let to = config.to;
@@ -108,8 +110,10 @@ function _alias(plugin, connection, key, config, host) {
   }
 
   connection.logdebug(plugin, "aliasing " + txn.rcpt_to + " to " + to);
-  txn.rcpt_to.pop();
+  const original_rcpt = txn.rcpt_to.pop();
   txn.rcpt_to.push(new Address(`<${to}>`));
+
+  return next(OK, `recipient ${original_rcpt} OK`);
 }
 
 
@@ -136,8 +140,7 @@ function _domain_alias(plugin, connection, key, config, host, next) {
   const original_rcpt = txn.rcpt_to.pop();
   to = original_rcpt.user + to;
   
-  txn.rcpt_to.pop();
   txn.rcpt_to.push(new Address(`<${to}>`));
 
-  return next(OK);
+  return next(OK, `recipient ${original_rcpt} OK`);
 }
