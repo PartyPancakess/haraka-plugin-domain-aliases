@@ -2,7 +2,7 @@
 // Do not run this plugin with the queue/smtp_proxy plugin.
 // Place this plugin before rcpt_to.in_host_list in config/plugins file.
 // This plugin must be the last rcpt_to plugin in the config/plugins list (except for rcpt_to.in_host_list and haraka-plugin-domain-limit).
-const Address = require('address-rfc2821').Address;
+const Address = require('../haraka-necessary-helper-plugins/address-rfc2821').Address;
 
 exports.register = function () {
   this.inherits('queue/discard');
